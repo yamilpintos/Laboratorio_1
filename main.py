@@ -1,7 +1,5 @@
 import joblib
 from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.metrics import accuracy_score
-from sklearn.model_selection import train_test_split
 from sklearn.tree import DecisionTreeClassifier
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
@@ -113,54 +111,4 @@ async def franquicia(franquicia):
     return response_str
 
 
-# Cargar dataset
-df = pd.read_csv('movies_dataset_final1.csv')
 
-
-movies_subset = df[['production_companies_name', 'title', 'genre_name']]
-
-movies_subset = movies_subset.dropna()
-
-
-movies_subset = movies_subset.head(18000)
-
-
-movies_subset = pd.get_dummies(movies_subset, columns=[
-                               'production_companies_name', 'genre_name'])
-
-
-model = NearestNeighbors(n_neighbors=6, metric='cosine', algorithm='brute')
-model.fit(movies_subset.drop('title', axis=1))# Entrenar modelo de vecinos cercanos
-
-
-scaler = StandardScaler()
-movies_norm = scaler.fit_transform(
-    movies_subset.drop('title', axis=1))  # Normalizar los datos
-
-
-joblib.dump(model, 'model.joblib')
-joblib.dump(scaler, 'scaler.joblib')  # Guardar modelo y scaler entrenados
-
-# Función de recomendación
-
-
-@app.get("/recomendacion")
-async def recomendacion(titulo: str):
-   
-    model = joblib.load('model.joblib')
-    scaler = joblib.load('scaler.joblib')  # Cargar modelo y scaler entrenados
-
-    
-    title_features = movies_subset[movies_subset['title'] == titulo].drop(
-        'title', axis=1)
-    title_features = scaler.transform(title_features)
-
-   
-    distances, indices = model.kneighbors(title_features, n_neighbors=6)
-
-    titles = []
-    for i in range(1, len(distances.flatten())):
-        titles.append(
-            df[df.index == indices.flatten()[i]]['title'].values[0])
-
-    return {'lista recomendada': titles}
