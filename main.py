@@ -120,11 +120,9 @@ async def franquicia(franquicia):
     return response_str
 
 
-# Cargar dataset
-movies = pd.read_csv('movies_dataset_final1.csv')
 
 # Seleccionar solo las columnas necesarias
-movies_subset = movies[['production_companies_name', 'title', 'genre_name']]
+movies_subset = df[['production_companies_name', 'title', 'genre_name']]
 
 # Eliminar filas con valores nulos
 movies_subset = movies_subset.dropna()
@@ -169,7 +167,7 @@ async def recomendacion(titulo: str):
     titles = []
     for i in range(1, len(distances.flatten())):
         titles.append(
-            movies[movies.index == indices.flatten()[i]]['title'].values[0])
+            df[df.index == indices.flatten()[i]]['title'].values[0])
 
     return {'lista recomendada': titles}
 
