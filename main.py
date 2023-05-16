@@ -16,6 +16,7 @@ import calendar
 from fastapi import FastAPI
 from datetime import datetime
 import pandas as pd
+from typing import Dict
 
 app = FastAPI()
 
