@@ -1,3 +1,4 @@
+from sklearn.preprocessing import OneHotEncoder
 from sklearn.preprocessing import MinMaxScaler
 import joblib
 from sklearn.feature_extraction.text import CountVectorizer
@@ -93,14 +94,11 @@ async def retorno(pelicula: str):
 @app.get("/Franquisia")
 async def franquicia(franquicia):
 
-    # Filtramos las filas que pertenecen a la franquicia.
-    franquicia_df = df[df['collection_name'] == franquicia]
+    franquicia_df = df[df['collection_name'] == franquicia]  # Filtramos las filas que pertenecen a la franquicia.
 
-    # Contar la cantidad de películas de la franquicia
-    cantidad = franquicia_df['title'].nunique()
+    cantidad = franquicia_df['title'].nunique()  # Contar la cantidad de películas de la franquicia
 
-    # Calcular la ganancia total de la franquicia
-    ganancia_total = franquicia_df['revenue'].sum()
+    ganancia_total = franquicia_df['revenue'].sum()  # Calcular la ganancia total de la franquicia
 
     ganancia_promedio = ganancia_total / cantidad
 
@@ -111,34 +109,47 @@ async def franquicia(franquicia):
 
     return response_str
 
+movies_subset = df[['production_companies_name', 'title', 'genre_name']]
 
-features = ['budget', 'popularity', 'revenue', 'runtime', 'vote_average']
-X = df[features]
-
-imputer = SimpleImputer(strategy='mean')
-X_imputed = imputer.fit_transform(X)
-
-scaler = MinMaxScaler()
-X_scaled = scaler.fit_transform(X_imputed)
-
-# Paso 5: Construir el modelo de k-NN
-model = NearestNeighbors()
-model.fit(X_scaled)
+movies_subset = movies_subset.dropna()
 
 
-@app.get('/recomendacion/{titulo}')
-def recomendacion(titulo: str):
-    '''Ingresas un nombre de pelicula y te recomienda las similares en una lista'''
-    # Buscar el índice de la película según el título
-    movie_index = df[df['title'] == titulo].index[0]
+movies_subset = movies_subset.head(5000)
 
-    # Convertir el vector de características en un arreglo bidimensional
-    X_movie = X_scaled[movie_index].reshape(1, -1)
 
-    # Obtener las películas recomendadas utilizando el modelo de k-NN
-    distances, indices = model.kneighbors(X_movie)
-    recommended_movies = df.iloc[indices[0]]['title'].tolist()
+movies_subset = pd.get_dummies(movies_subset, columns=[
+                               'production_companies_name', 'genre_name'])
 
-    respuesta = {'1': str(recommended_movies[0]), '2': str(recommended_movies[1]), '3': str(
-        recommended_movies[2]), '4': str(recommended_movies[3]), '5': str(recommended_movies[4])}
-    return {'lista recomendada': respuesta}
+
+model = NearestNeighbors(n_neighbors=6, metric='cosine', algorithm='brute')
+# Entrenar modelo de vecinos cercanos
+model.fit(movies_subset.drop('title', axis=1))
+
+
+scaler = StandardScaler()
+movies_norm = scaler.fit_transform(
+    movies_subset.drop('title', axis=1))  # Normalizar los datos
+
+
+joblib.dump(model, 'model.joblib')
+joblib.dump(scaler, 'scaler.joblib')  # Guardar modelo y scaler entrenados
+
+
+@app.get("/recomendacion")
+async def recomendacion(titulo: str):
+
+    model = joblib.load('model.joblib')
+    scaler = joblib.load('scaler.joblib')  # Cargar modelo y scaler entrenados
+
+    title_features = movies_subset[movies_subset['title'] == titulo].drop(
+        'title', axis=1)
+    title_features = scaler.transform(title_features)
+
+    distances, indices = model.kneighbors(title_features, n_neighbors=6)
+
+    titles = []
+    for i in range(1, len(distances.flatten())):
+        titles.append(
+            df[df.index == indices.flatten()[i]]['title'].values[0])
+
+    return {'lista recomendada': titles}
