@@ -18,6 +18,205 @@ from datetime import datetime
 import pandas as pd
 from typing import Dict
 
+import pandas as pd
+import ast
+
+
+df = pd.read_csv('movies_dataset.csv')
+
+
+df_belongs_to_collection = df[df['belongs_to_collection'].notnull()]
+df_belongs_to_collection['belongs_to_collection'] = df_belongs_to_collection['belongs_to_collection'].apply(
+    lambda x: x.replace("'s", "'"))
+df_belongs_to_collection['belongs_to_collection'] = df_belongs_to_collection['belongs_to_collection'].apply(
+    lambda x: ast.literal_eval(x))
+df_belongs_to_collection['belongs_to_collection'] = df_belongs_to_collection['belongs_to_collection'].apply(
+    lambda x: {k: v for k, v in x.items() if k != 'id'} if x is not None else None)
+
+
+dict_to_remove = {"id": 10455, "name": "Child's Play Collection",
+                  "poster_path": "/50aqbDvbOtdlZrje6Qk4ZvKM7dM.jpg", "backdrop_path": "/AAhYXBVIEl6WgQnzfBsauTIC25.jpg"}
+df_belongs_to_collection = df_belongs_to_collection[
+    df_belongs_to_collection['belongs_to_collection'] != dict_to_remove]
+
+df_belongs_to_collection.to_csv('movies_unacolumna.csv', index=False)
+
+
+df = pd.read_csv('movies_dataset.csv')
+
+
+for i, row in df.iterrows(): 
+    belongs_to_collection = row['belongs_to_collection']
+    if isinstance(belongs_to_collection, str): 
+        try:
+            dict_data = ast.literal_eval(belongs_to_collection)
+            if isinstance(dict_data, dict):  
+                df.loc[i, 'collection_id'] = dict_data.get('id', None)
+                df.loc[i, 'collection_name'] = dict_data.get('name', None)
+                df.loc[i, 'collection_poster_path'] = dict_data.get(
+                    'poster_path', None)
+        except (ValueError, SyntaxError):  
+            pass
+
+        import ast
+import pandas as pd
+
+df = pd.read_csv('movies_unalistadediccionarios.csv')
+
+df['genre_name'] = ''  
+df['genre_id'] = ''
+
+for i, row in df.iterrows():  
+    my_list = row['genres']
+    if isinstance(my_list, str):  
+        try:
+            list_data = ast.literal_eval(my_list)
+            if isinstance(list_data, list):  
+                for dict_data in list_data:
+                    
+                    if isinstance(dict_data, dict):
+
+                        if 'name' in dict_data:  
+                            df.at[i, 'genre_name'] = dict_data['name']
+                        if 'id' in dict_data:
+                            df.at[i, 'genre_id'] = dict_data['id']
+
+        except (ValueError, SyntaxError):  
+            pass
+
+
+print(df)
+
+
+df.to_csv('movies_unalistadediccionarios.csv',
+          index=False)
+
+
+print(df)
+
+
+import ast
+import pandas as pd
+
+df = pd.read_csv('movies_unalistadediccionarios.csv')
+
+
+
+df['production_companies_name'] = ''
+df['production_companies_id'] = ''
+
+
+for i, row in df.iterrows():  
+    my_list = row['production_companies']
+    if isinstance(my_list, str):  
+        try:
+            list_data = ast.literal_eval(my_list)
+            if isinstance(list_data, list):  
+                for dict_data in list_data:
+                    if isinstance(dict_data, dict):  
+
+                        if 'name' in dict_data:
+                           
+                            df.at[i, 'production_companies_name'] = dict_data['name']
+                        if 'id' in dict_data:
+                            df.at[i, 'production_companies_id'] = dict_data['id']
+
+        except (ValueError, SyntaxError):  
+            pass
+
+print(df)
+
+
+df.to_csv('movies_unalistadediccionarios.csv', index=False)
+df.to_csv('movies_unalistadediccionarios.csv', index=False)
+
+import ast
+import pandas as pd
+
+df = pd.read_csv('movies_unalistadediccionarios.csv')
+
+
+df['production_countries_name'] = ''
+df['production_countries_id'] = ''
+
+
+for i, row in df.iterrows():
+    my_list = row['production_countries']
+    if isinstance(my_list, str):
+        try:
+            list_data = ast.literal_eval(my_list)
+            if isinstance(list_data, list):
+                for dict_data in list_data:
+                    if isinstance(dict_data, dict):
+                        if 'name' in dict_data:
+                            df.at[i, 'production_countries_name'] = dict_data['name']
+                        if 'id' in dict_data:
+                            df.at[i, 'production_countries_id'] = dict_data['id']
+
+        except (ValueError, SyntaxError):
+            pass
+
+
+print(df)
+
+df.to_csv('movies_unalistadediccionarios.csv', index=False)
+import ast
+import pandas as pd
+
+df = pd.read_csv('movies_unalistadediccionarios.csv')
+
+
+df['spoken_languages_name'] = ''
+df['spoken_languages_iso'] = ''
+
+
+for i, row in df.iterrows():
+    my_list = row['spoken_languages']
+    if isinstance(my_list, str):
+        try:
+            list_data = ast.literal_eval(my_list)
+            if isinstance(list_data, list):
+                for dict_data in list_data:
+                    if isinstance(dict_data, dict):
+
+                        if 'name' in dict_data:
+                            df.at[i, 'spoken_languages_name'] = dict_data['name']
+                        if 'iso_639_1' in dict_data:
+                            df.at[i, 'spoken_languages_iso'] = dict_data['iso_639_1']
+
+        except (ValueError, SyntaxError):
+            pass
+
+
+print(df)
+
+df.to_csv('movies_unalistadediccionarios.csv', index=False)
+
+
+import pandas as pd
+
+
+df = pd.read_csv('movies_dataset_final.csv')
+
+
+df['revenue'].fillna(0, inplace=True)
+df['budget'].fillna(0, inplace=True)
+
+
+df.dropna(subset=['release_date'], inplace=True)
+
+df['release_date'] = pd.to_datetime(df['release_date'], errors='coerce') 
+df['release_year'] = df['release_date'].dt.year.astype('Int64') 
+
+ 
+df['return'] = df['revenue'] / df['budget']  
+
+
+df.drop(columns=['video', 'imdb_id', 'adult', 'original_title',
+        'vote_count', 'poster_path', 'homepage'], inplace=True)  
+
+
+df.to_csv('movies_dataset_final1.csv', index=False)
 app = FastAPI()
 
 
