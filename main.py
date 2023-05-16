@@ -25,24 +25,24 @@ df = pd.read_csv("movies_dataset_final1.csv", parse_dates=["release_date"])
 
 @app.get("/peliculas_mes")
 async def peliculas_mes(mes: str):
-    # Convertir el mes a un objeto datetime
-    datetime_obj = datetime.strptime(mes, "%m")
-    # Obtener las películas que se estrenaron ese mes
-    filtered_movies = df[df["release_date"].dt.month == datetime_obj.month]
-    # Contar la cantidad de películas
-    cantidad = len(filtered_movies)
+    
+    datetime_obj = datetime.strptime(mes, "%m") #Convertimos a datatime 
+    
+    filtered_movies = df[df["release_date"].dt.month == datetime_obj.month]#filtramos peliculas de ese mes 
+    
+    cantidad = len(filtered_movies)  # Contamos la cantidad de películas
     return {"mes": datetime_obj.strftime("%B"), "cantidad": cantidad}
 
 
 @app.get("/peliculas_dia")
 async def peliculas_dia(dia: int):
-    # Convertir el número de día a un nombre de día de la semana
-    dia_semana = calendar.day_name[dia]
-    # Obtener las películas que se estrenaron ese día de la semana
-    filtered_movies = df[df["release_date"].dt.day_name() == dia_semana]
-    # Contar la cantidad de películas
-    cantidad = len(filtered_movies)
-    # Retornar el resultado en un diccionario
+    
+    dia_semana = calendar.day_name[dia] # Convertir el número de día a un nombre de día de la semana
+
+    filtered_movies = df[df["release_date"].dt.day_name() == dia_semana]#filtramos peliculas por dia de estreno
+   
+    cantidad = len(filtered_movies)  # Contamos la cantidad de películas
+    
     return {"dia": dia_semana, "cantidad": cantidad}
 
 
@@ -50,34 +50,29 @@ async def peliculas_dia(dia: int):
 
 @app.get("/peliculas_pais/{pais}")
 async def peliculas_pais(pais: str):
-    # Filtrar las películas por país
+    
     peliculas = df[df['production_countries_name'].str.contains(
-        pais, na=False)]
+        pais, na=False)]  # Filtramos las películas por país
 
-    # Contar el número de películas por país
+    
     cantidad = len(peliculas)
 
-    # Crear el diccionario de respuesta
+    
     respuesta = {"pais": pais, "cantidad": cantidad}
 
-    # Devolver la respuesta
+    
     return respuesta
 
 
 
-# Definir la ruta para la función productoras
-
-
 @app.get("/productoras/{productora}")
 async def productoras(productora: str):
-    # Filtrar las filas que corresponden a la productora
-    df_productora = df[df['production_companies_name'] == productora]
+    
+    df_productora = df[df['production_companies_name'] == productora]# Filtramos columna productora
 
-    # Calcular la ganancia total y la cantidad de películas
-    ganancia_total = df_productora['revenue'].sum()
+    ganancia_total = df_productora['revenue'].sum()  # Calculamos la ganancia total y la cantidad de películas
     cantidad = len(df_productora)
 
-    # Retornar el resultado como un diccionario
     return {'productora': productora, 'ganancia_total': ganancia_total, 'cantidad': cantidad}
 
 
@@ -99,86 +94,73 @@ async def retorno(pelicula: str):
 
 @app.get("/Franquisia")
 async def franquicia(franquicia):
-    # Filtrar las filas que pertenecen a la franquicia especificada
-    franquicia_df = df[df['collection_name'] == franquicia]
+  
+    franquicia_df = df[df['collection_name'] == franquicia]  # Filtramos las filas que pertenecen a la franquicia.
 
-    # Contar la cantidad de películas de la franquicia
-    cantidad = franquicia_df['title'].nunique()
+    cantidad = franquicia_df['title'].nunique()  # Contar la cantidad de películas de la franquicia
 
-    # Calcular la ganancia total de la franquicia
-    ganancia_total = franquicia_df['revenue'].sum()
+    ganancia_total = franquicia_df['revenue'].sum()  # Calcular la ganancia total de la franquicia
 
-    # Calcular la ganancia promedio por película de la franquicia
+
     ganancia_promedio = ganancia_total / cantidad
 
-    # Convertir el objeto JSON a una cadena compatible con JSON
+   
     response_data = {"franquicia": franquicia, "cantidad": cantidad,
                      "ganancia_total": ganancia_total, "ganancia_promedio": ganancia_promedio}
-    response_str = json.dumps(response_data)
+    response_str = json.dumps(response_data) # Convertir el objeto JSON a una cadena compatible con JSON
 
-    # Devolver la cadena como respuesta de la API
+ 
     return response_str
 
-
-app = FastAPI()
 
 # Cargar dataset
 df = pd.read_csv('movies_dataset_final1.csv')
 
-# Seleccionar solo las columnas necesarias
+
 movies_subset = df[['production_companies_name', 'title', 'genre_name']]
 
-# Eliminar filas con valores nulos
 movies_subset = movies_subset.dropna()
 
-# Limitar a 18000 filas
+
 movies_subset = movies_subset.head(18000)
 
-# Convertir valores categóricos en variables dummies
+
 movies_subset = pd.get_dummies(movies_subset, columns=[
                                'production_companies_name', 'genre_name'])
 
-# Entrenar modelo de vecinos cercanos
+
 model = NearestNeighbors(n_neighbors=6, metric='cosine', algorithm='brute')
-model.fit(movies_subset.drop('title', axis=1))
+model.fit(movies_subset.drop('title', axis=1))# Entrenar modelo de vecinos cercanos
 
-# Normalizar los datos
+
 scaler = StandardScaler()
-movies_norm = scaler.fit_transform(movies_subset.drop('title', axis=1))
+movies_norm = scaler.fit_transform(
+    movies_subset.drop('title', axis=1))  # Normalizar los datos
 
-# Guardar modelo y scaler entrenados
+
 joblib.dump(model, 'model.joblib')
-joblib.dump(scaler, 'scaler.joblib')
+joblib.dump(scaler, 'scaler.joblib')  # Guardar modelo y scaler entrenados
 
 # Función de recomendación
 
 
 @app.get("/recomendacion")
 async def recomendacion(titulo: str):
-    # Cargar modelo y scaler entrenados
+   
     model = joblib.load('model.joblib')
-    scaler = joblib.load('scaler.joblib')
+    scaler = joblib.load('scaler.joblib')  # Cargar modelo y scaler entrenados
 
-    # Crear vector de características del título proporcionado
+    
     title_features = movies_subset[movies_subset['title'] == titulo].drop(
         'title', axis=1)
     title_features = scaler.transform(title_features)
 
-    # Obtener índices de las películas similares
+   
     distances, indices = model.kneighbors(title_features, n_neighbors=6)
 
-    # Obtener los títulos de las películas similares
     titles = []
     for i in range(1, len(distances.flatten())):
         titles.append(
             df[df.index == indices.flatten()[i]]['title'].values[0])
 
     return {'lista recomendada': titles}
-
-
-
-
-
-
-
-
