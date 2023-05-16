@@ -1,3 +1,4 @@
+from sklearn.preprocessing import MinMaxScaler
 import joblib
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.tree import DecisionTreeClassifier
@@ -110,5 +111,33 @@ async def franquicia(franquicia):
  
     return response_str
 
+features = ['budget', 'popularity', 'revenue', 'runtime', 'vote_average']
+X = df[features]
+
+imputer = SimpleImputer(strategy='mean')
+X_imputed = imputer.fit_transform(X)
+
+scaler = MinMaxScaler()
+X_scaled = scaler.fit_transform(X_imputed)
+
+# Paso 5: Construir el modelo de k-NN
+model = NearestNeighbors()
+model.fit(X_scaled)
 
 
+@app.get('/recomendacion/{titulo}')
+def recomendacion(titulo: str):
+    '''Ingresas un nombre de pelicula y te recomienda las similares en una lista'''
+    # Buscar el índice de la película según el título
+    movie_index = df[df['title'] == titulo].index[0]
+
+    # Convertir el vector de características en un arreglo bidimensional
+    X_movie = X_scaled[movie_index].reshape(1, -1)
+
+    # Obtener las películas recomendadas utilizando el modelo de k-NN
+    distances, indices = model.kneighbors(X_movie)
+    recommended_movies = df.iloc[indices[0]]['title'].tolist()
+
+    respuesta = {'1': str(recommended_movies[0]), '2': str(recommended_movies[1]), '3': str(
+        recommended_movies[2]), '4': str(recommended_movies[3]), '5': str(recommended_movies[4])}
+    return {'lista recomendada': respuesta}
