@@ -20,31 +20,33 @@ from typing import Dict
 
 app = FastAPI()
 
-# Leer el archivo csv
+
 df = pd.read_csv("movies_dataset_final1.csv", parse_dates=["release_date"])
 
 
-@app.get("/peliculas_mes")
-async def peliculas_mes(mes: str):
-    meses: Dict[str, int] = {'enero': "01", 'febrero': "02", 'marzo': "03", 'abril': "04", 'mayo': "05", 'junio': "06",
-                             'julio': "07", 'agosto': "08", 'septiembre': "09", 'octubre': "10", 'noviembre': "11", 'diciembre': "12"}
-    
-    datetime_objeto = datetime.strptime(mes, "%m") #Convertimos a datatime 
-    
-    filtered_movies = df[df["release_date"].dt.month == datetime_objeto.month]#filtramos peliculas de ese mes 
-    
-    cantidad = len(filtered_movies)  # Contamos la cantidad de películas
-    return {"mes": datetime_objeto.strftime("%B"), "cantidad": cantidad}
+def peliculas_mes(mes: str) -> int:
+    meses: Dict[str, int] = {'enero': 1, 'febrero': 2, 'marzo': 3, 'abril': 4, 'mayo': 5, 'junio': 6,
+                             'julio': 7, 'agosto': 8, 'septiembre': 9, 'octubre': 10, 'noviembre': 11, 'diciembre': 12}
+
+    mes_limpio = mes.lower()
+    if mes_limpio not in meses:
+        print(f"Error: mes {mes} inválido")
+        return 0
+
+    mes_numero = meses[mes_limpio]
+    mes_numero = meses[mes.lower()]
+    peliculas = [p for p in df['release_date']
+                 if isinstance(p, str) and datetime.strptime(p, '%Y-%m-%d').month == mes_numero]
+    return len(peliculas)
 
 
 @app.get("/peliculas_dia")
 async def peliculas_dia(dia: int):
     
-    dia_semana = calendar.day_name[dia] # Convertir el número de día a un nombre de día de la semana
+    dia_semana = calendar.day_name[dia] 
 
-    filtro_movies = df[df["release_date"].dt.day_name() == dia_semana]#filtramos peliculas por dia de estreno
-   
-    cantidad = len(filtro_movies)  # Contamos la cantidad de películas
+    filtro_movies = df[df["release_date"].dt.day_name() == dia_semana]
+    cantidad = len(filtro_movies)  
     
     return {"dia": dia_semana, "cantidad": cantidad}
 
@@ -55,7 +57,7 @@ async def peliculas_dia(dia: int):
 async def peliculas_pais(pais: str):
     
     peliculas = df[df['production_countries_name'].str.contains(
-        pais, na=False)]  # Filtramos las películas por país
+        pais, na=False)]  
 
     
     cantidad = len(peliculas)
@@ -71,9 +73,8 @@ async def peliculas_pais(pais: str):
 @app.get("/productoras/{productora}")
 async def productoras(productora: str):
     
-    df_productora = df[df['production_companies_name'] == productora]# Filtramos columna productora
-
-    ganancia_total = df_productora['revenue'].sum()  # Calculamos la ganancia total y la cantidad de películas
+    df_productora = df[df['production_companies_name'] == productora]
+    ganancia_total = df_productora['revenue'].sum()  
     cantidad = len(df_productora)
 
     return {'productora': productora, 'ganancia_total': ganancia_total, 'cantidad': cantidad}
@@ -97,18 +98,18 @@ async def retorno(pelicula: str):
 @app.get("/Franquisia")
 async def franquicia(franquicia):
 
-    franquicia_df = df[df['collection_name'] == franquicia]  # Filtramos las filas que pertenecen a la franquicia.
+    franquicia_df = df[df['collection_name'] == franquicia]  
 
-    cantidad = franquicia_df['title'].nunique()  # Contar la cantidad de películas de la franquicia
+    cantidad = franquicia_df['title'].nunique()  
 
-    ganancia_total = franquicia_df['revenue'].sum()  # Calcular la ganancia total de la franquicia
+    ganancia_total = franquicia_df['revenue'].sum()  
 
     ganancia_promedio = ganancia_total / cantidad
 
     respuesta_data = {"franquicia": franquicia, "cantidad": cantidad,
                      "ganancia_total": ganancia_total, "ganancia_promedio": ganancia_promedio}
     
-    response_str = json.dumps(respuesta_data) # Convertir el objeto JSON a una cadena compatible con JSON
+    response_str = json.dumps(respuesta_data) 
 
     return response_str
 
@@ -126,23 +127,23 @@ movies_1 = pd.get_dummies(movies_1, columns=[
 
 model = NearestNeighbors(n_neighbors=6, metric='cosine', algorithm='brute')
 
-model.fit(movies_1.drop('title', axis=1))# Entrenar modelo de vecinos cercanos
+model.fit(movies_1.drop('title', axis=1))
 
 
 scaler = StandardScaler()
 movies_norm = scaler.fit_transform(
-    movies_1.drop('title', axis=1))  # Normalizar los datos
+    movies_1.drop('title', axis=1)) 
 
 
 joblib.dump(model, 'model.joblib')
-joblib.dump(scaler, 'scaler.joblib')  # Guardar modelo y scaler entrenados
+joblib.dump(scaler, 'scaler.joblib')  
 
 
 @app.get("/recomendacion")
 async def recomendacion(titulo: str):
 
     model = joblib.load('model.joblib')
-    scaler = joblib.load('scaler.joblib')  # Cargar modelo y scaler entrenados
+    scaler = joblib.load('scaler.joblib')  
 
     title_features = movies_1[movies_1['title'] == titulo].drop(
         'title', axis=1)
