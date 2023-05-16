@@ -120,6 +120,10 @@ async def franquicia(franquicia):
     return response_str
 
 
+app = FastAPI()
+
+# Cargar dataset
+df = pd.read_csv('movies_dataset_final1.csv')
 
 # Seleccionar solo las columnas necesarias
 movies_subset = df[['production_companies_name', 'title', 'genre_name']]
@@ -149,7 +153,7 @@ joblib.dump(scaler, 'scaler.joblib')
 # Función de recomendación
 
 
-@app.get("Recomendacion")
+@app.get("/recomendacion")
 async def recomendacion(titulo: str):
     # Cargar modelo y scaler entrenados
     model = joblib.load('model.joblib')
