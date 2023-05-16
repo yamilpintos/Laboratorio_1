@@ -139,19 +139,15 @@ joblib.dump(scaler, 'scaler.joblib')  # Guardar modelo y scaler entrenados
 
 @app.get("/recomendacion")
 async def recomendacion(titulo: str):
+
     model = joblib.load('model.joblib')
     scaler = joblib.load('scaler.joblib')  # Cargar modelo y scaler entrenados
 
-    genero = df[df['title'] == titulo]['genre_name'].values[0]
-
-    # Filtrar películas por género
-    genre_movies = movies_1[movies_1['genre_name'] == genero]
-
-    title_caracteristica = genre_movies[genre_movies['title'] == titulo].drop(
+    title_features = movies_1[movies_1['title'] == titulo].drop(
         'title', axis=1)
-    title_caracteristica = scaler.transform(title_caracteristica)
+    title_features = scaler.transform(title_features)
 
-    distances, indices = model.kneighbors(title_caracteristica, n_neighbors=6)
+    distances, indices = model.kneighbors(title_features, n_neighbors=6)
 
     titles = []
     for i in range(1, len(distances.flatten())):
