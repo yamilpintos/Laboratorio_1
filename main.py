@@ -1,3 +1,4 @@
+import joblib
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
@@ -117,6 +118,61 @@ async def franquicia(franquicia):
 
     # Devolver la cadena como respuesta de la API
     return response_str
+
+
+# Cargar dataset
+movies = pd.read_csv('movies_dataset_final1.csv')
+
+# Seleccionar solo las columnas necesarias
+movies_subset = movies[['production_companies_name', 'title', 'genre_name']]
+
+# Eliminar filas con valores nulos
+movies_subset = movies_subset.dropna()
+
+# Limitar a 18000 filas
+movies_subset = movies_subset.head(18000)
+
+# Convertir valores categóricos en variables dummies
+movies_subset = pd.get_dummies(movies_subset, columns=[
+                               'production_companies_name', 'genre_name'])
+
+# Entrenar modelo de vecinos cercanos
+model = NearestNeighbors(n_neighbors=6, metric='cosine', algorithm='brute')
+model.fit(movies_subset.drop('title', axis=1))
+
+# Normalizar los datos
+scaler = StandardScaler()
+movies_norm = scaler.fit_transform(movies_subset.drop('title', axis=1))
+
+# Guardar modelo y scaler entrenados
+joblib.dump(model, 'model.joblib')
+joblib.dump(scaler, 'scaler.joblib')
+
+# Función de recomendación
+
+
+@app.get("Recomendacion")
+async def recomendacion(titulo: str):
+    # Cargar modelo y scaler entrenados
+    model = joblib.load('model.joblib')
+    scaler = joblib.load('scaler.joblib')
+
+    # Crear vector de características del título proporcionado
+    title_features = movies_subset[movies_subset['title'] == titulo].drop(
+        'title', axis=1)
+    title_features = scaler.transform(title_features)
+
+    # Obtener índices de las películas similares
+    distances, indices = model.kneighbors(title_features, n_neighbors=6)
+
+    # Obtener los títulos de las películas similares
+    titles = []
+    for i in range(1, len(distances.flatten())):
+        titles.append(
+            movies[movies.index == indices.flatten()[i]]['title'].values[0])
+
+    return {'lista recomendada': titles}
+
 
 
 
