@@ -122,59 +122,5 @@ async def franquicia(franquicia):
 
 
 
-# Cargar el conjunto de datos
-movies = pd.read_csv('movies_dataset_final1.csv')
-
-# Seleccionar las columnas relevantes para el modelo
-movies_subset = movies[['original_language', 'collection_name', 'genre_name', 'production_companies_name', 'production_countries_name']]
-
-# Eliminar filas con valores faltantes
-movies_subset = movies_subset.dropna()
-
-# Dividir los datos en conjuntos de entrenamiento y prueba
-X_train, X_test, y_train, y_test = train_test_split(
-    movies_subset['title'], movies_subset[['original_language', 'collection_name', 'genre_name', 'production_companies_name', 'production_countries_name']], test_size=0.2, random_state=42)
-
-# Crear un vectorizador para convertir los títulos en características numéricas
-vectorizer = CountVectorizer()
-
-# Convertir los títulos en características numéricas
-X_train_vec = vectorizer.fit_transform(X_train)
-X_test_vec = vectorizer.transform(X_test)
-
-# Crear el modelo de árbol de decisión
-clf = DecisionTreeClassifier()
-
-# Entrenar el modelo con los datos de entrenamiento
-clf.fit(X_train_vec, y_train)
-
-# Predecir los géneros de las películas en el conjunto de prueba
-y_pred = clf.predict(X_test_vec)
-
-# Calcular la precisión del modelo
-accuracy = accuracy_score(y_test, y_pred)
-print("La precisión del modelo es:", accuracy)
-
-
-@app.get("/recomendacion/{titulo}", tags=["Recomendación de películas"])
-async def recomendacion(titulo: str) -> List[str]:
-    # Busca el índice de la película con el título dado
-    movie_index = movies[movies['title'] == titulo].index.values[0]
-
-    # Realiza la predicción
-    X = vectorizer.transform([titulo])
-    y_pred = clf.predict(X)[0]
-
-    # Filtra las películas por género y por la predicción del modelo
-    peliculas_recomendadas = movies[(
-        movies['genre_name'] == y_pred) & (movies['title'] != titulo)]
-    X = vectorizer.transform(peliculas_recomendadas['title'])
-    y_pred = clf.predict(X)
-    peliculas_recomendadas['predicciones'] = y_pred
-    peliculas_recomendadas = peliculas_recomendadas.sort_values(
-        'predicciones', ascending=False).head(10)['title'].tolist()
-
-    return peliculas_recomendadas
-
 
 
