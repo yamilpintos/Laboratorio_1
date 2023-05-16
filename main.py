@@ -91,25 +91,6 @@ async def retorno(pelicula: str):
 
 
 
-@app.get("/Franquisia")
-async def franquicia(franquicia):
-  
-    franquicia_df = df[df['collection_name'] == franquicia]  # Filtramos las filas que pertenecen a la franquicia.
-
-    cantidad = franquicia_df['title'].nunique()  # Contar la cantidad de películas de la franquicia
-
-    ganancia_total = franquicia_df['revenue'].sum()  # Calcular la ganancia total de la franquicia
-
-
-    ganancia_promedio = ganancia_total / cantidad
-
-   
-    response_data = {"franquicia": franquicia, "cantidad": cantidad,
-                     "ganancia_total": ganancia_total, "ganancia_promedio": ganancia_promedio}
-    response_str = json.dumps(response_data) # Convertir el objeto JSON a una cadena compatible con JSON
-
- 
-    return response_str
 
 features = ['budget', 'popularity', 'revenue', 'runtime', 'vote_average']
 X = df[features]
